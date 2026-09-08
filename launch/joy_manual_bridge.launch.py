@@ -18,6 +18,12 @@ def generate_launch_description():
         DeclareLaunchArgument('gear_change_max_speed', default_value='0.5'),
         # 페달 안 밟았을 때 넣어줄 브레이크 (크리프 방지). 0이면 끔
         DeclareLaunchArgument('idle_brake', default_value='0.2'),
+        # 기어별 최대 속도 [m/s], 0이면 제한 없음
+        DeclareLaunchArgument('low_gear_max_speed', default_value='3.0'),
+        DeclareLaunchArgument('drive_gear_max_speed', default_value='0.0'),
+        DeclareLaunchArgument('reverse_gear_max_speed', default_value='3.0'),
+        # gate가 AUTO로 돌아가면 다시 EXTERNAL로 되돌릴지
+        DeclareLaunchArgument('hold_gate_external', default_value='true'),
         # 스로틀 배율. 기본 accel map(0.5까지)을 쓰면 0.5 권장
         DeclareLaunchArgument('throttle_scale', default_value='1.0'),
         # joy_controller 하트비트 없이도 계속 ready를 쏠지 (테스트용)
@@ -38,6 +44,14 @@ def generate_launch_description():
                     LaunchConfiguration('gear_change_max_speed'),
                 'idle_brake': LaunchConfiguration('idle_brake'),
                 'throttle_scale': LaunchConfiguration('throttle_scale'),
+                'low_gear_max_speed':
+                    LaunchConfiguration('low_gear_max_speed'),
+                'drive_gear_max_speed':
+                    LaunchConfiguration('drive_gear_max_speed'),
+                'reverse_gear_max_speed':
+                    LaunchConfiguration('reverse_gear_max_speed'),
+                'hold_gate_external':
+                    LaunchConfiguration('hold_gate_external'),
                 'heartbeat_always': LaunchConfiguration('heartbeat_always'),
             }],
             output='screen',

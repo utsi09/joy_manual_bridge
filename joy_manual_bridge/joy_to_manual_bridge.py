@@ -143,6 +143,29 @@ class JoyToManualBridge(Node):
             "throttle_scale",
             1.0,
         )
+        # 기어별 최대 속도[m/s]. converter는 LOW와 DRIVE를 똑같이 취급하므로
+        # 여기서 속도를 넘으면 스로틀을 0으로 자르고 idle_brake로 감속시킨다.
+        # 0 이하는 제한 없음.
+        self.declare_parameter(
+            "low_gear_max_speed",
+            3.0,
+        )
+        self.declare_parameter(
+            "drive_gear_max_speed",
+            0.0,
+        )
+        self.declare_parameter(
+            "reverse_gear_max_speed",
+            3.0,
+        )
+        # true면 이 노드가 떠 있는 동안 gate가 AUTO로 돌아가면 다시 EXTERNAL로
+        # 되돌린다. 조이스틱의 gate 토글 버튼(DS4 프로파일에서 Options, Xbox
+        # 모드 패드에서는 왼쪽 스틱 클릭)이 실수로 눌려도 자율주행으로 넘어가지
+        # 않게 하는 용도. 토글을 쓰고 싶으면 false.
+        self.declare_parameter(
+            "hold_gate_external",
+            True,
+        )
         self.declare_parameter(
             "velocity_topic",
             "/vehicle/status/velocity_status",
@@ -170,6 +193,16 @@ class JoyToManualBridge(Node):
         self.throttle_scale = clamp(
             self.get_parameter("throttle_scale").value, 0.0, 1.0
         )
+        self.gear_max_speed = {
+            GearCommand.LOW: float(self.get_parameter("low_gear_max_speed").value),
+            GearCommand.DRIVE: float(
+                self.get_parameter("drive_gear_max_speed").value
+            ),
+            GearCommand.REVERSE: float(
+                self.get_parameter("reverse_gear_max_speed").value
+            ),
+        }
+        self.hold_gate_external = self.get_parameter("hold_gate_external").value
         velocity_topic = self.get_parameter("velocity_topic").value
 
         self.publish_gear = self.get_parameter("publish_gear").value
@@ -332,6 +365,22 @@ class JoyToManualBridge(Node):
         ):
             throttle = 0.0
             brake = self.idle_brake
+        # 기어별 속도 제한
+        limit = self.gear_max_speed.get(self.gear_command, 0.0)
+        if (
+            limit > 0.0
+            and self.current_speed is not None
+            and self.current_speed > limit
+            and throttle > 0.0
+        ):
+            throttle = 0.0
+            brake = max(brake, self.idle_brake)
+            self.get_logger().info(
+                f"speed {self.current_speed:.1f} > gear limit {limit:.1f} m/s,"
+                " throttle cut",
+                throttle_duration_sec=2.0,
+            )
+
         pedals_msg.throttle = throttle * self.throttle_scale
         pedals_msg.brake = brake
 
@@ -430,6 +479,15 @@ class JoyToManualBridge(Node):
     def on_current_gate_mode(self, msg):
         # gate가 살아있고 아직 AUTO면 EXTERNAL로 한 번 바꾼다.
         if self.gate_done:
+            if self.hold_gate_external and msg.data == GateMode.AUTO:
+                cmd = GateMode()
+                cmd.data = GateMode.EXTERNAL
+                self.gate_mode_pub.publish(cmd)
+                self.get_logger().warn(
+                    "gate mode went AUTO, forcing back to EXTERNAL"
+                    " (hold_gate_external)",
+                    throttle_duration_sec=2.0,
+                )
             return
         if msg.data == GateMode.EXTERNAL:
             self.get_logger().info("gate mode already EXTERNAL")

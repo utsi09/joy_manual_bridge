@@ -75,10 +75,31 @@ gate mode도 이 노드가 시작하면서 `/control/current_gate_mode`가 AUTO�
 - `gear_command` (기본 2 = DRIVE, 시작 기어. 20 = REVERSE)
 
 - `idle_brake` (기본 0.2), `idle_pedal_threshold` (기본 0.05). 페달을 둘 다 안 밟으면 브레이크를 idle_brake로 채워서 보낸다. Autoware 기본 accel map은 스로틀 0에서도 정지 시 +0.3 m/s^2(크리프)를 내서 차가 슬금슬금 나가기 때문. 0.2면 기본 brake map 기준 정지 시 -0.38, 주행 중 -0.7~-1.0 m/s^2. 실차에서 크리프를 살리고 싶으면 0.
+- `low_gear_max_speed` (기본 3.0), `drive_gear_max_speed` (기본 0 = 무제한), `reverse_gear_max_speed` (기본 3.0). 기어별 최대 속도[m/s]. external_cmd_converter는 LOW와 DRIVE를 구분하지 않으므로 이 노드가 속도를 넘으면 스로틀을 0으로 자르고 idle_brake로 감속시킨다.
+- `hold_gate_external` (기본 true). 노드가 떠 있는 동안 gate가 AUTO로 돌아가면 다시 EXTERNAL로 되돌린다. gate 토글 버튼이 실수로 눌려 자율주행으로 넘어가는 것 방지. 토글을 쓰려면 false.
 - `throttle_scale` (기본 1.0). Autoware 기본 accel map은 스로틀 0.5까지만 있어서 그 이상이면 converter가 `Input throttle: acc: 1 is out of range. use closest value.`를 찍으며 0.5로 자른다. 기본 맵이면 0.5로 두면 로그가 사라지고 결과는 같다.
 - `gear_change_max_speed` (기본 0.5 m/s. 이 속도 넘거나 속도 정보가 없으면 D<->R 전환 거부, 0 이하면 보호 끔), `velocity_topic`
 
 launch 인자로 `use_sim_time`(기본 false), `gear_command`, `select_remote_on_start`, `gate_external_on_start`, `gear_change_max_speed`, `heartbeat_always`를 넘길 수 있다.
+
+## 버튼 매핑
+
+joy_controller의 `joy_type:=ds4` 프로파일은 `/joy` 배열 인덱스로만 동작하므로 실제 패드 종류에 따라 물리 버튼이 달라진다. `ros2 topic echo /joy`로 인덱스를 확인할 것.
+
+| 기능 | DS4 (듀얼쇼크4) | Xbox 360 모드 패드 (GameSir 등, 버튼 11개 레이아웃) |
+|---|---|---|
+| 가속 | R2 / ✕ / 오른쪽 스틱 위 | RT / A / 오른쪽 스틱 위 |
+| 브레이크 | L2 / □ / 오른쪽 스틱 아래 | LT / Y / 오른쪽 스틱 아래 |
+| 조향 | 왼쪽 스틱 좌우 | 왼쪽 스틱 좌우 |
+| 기어 D / R, 한 단 위/아래 | 십자키 → / ←, ↑ / ↓ | 십자키 → / ←, ↑ / ↓ |
+| 방향지시등 좌 / 우, 끄기 | L1 / R1, Share | LB / RB, Xbox(가이드) 버튼 |
+| 비상등 | L1 + R1 | LB + RB |
+| gate mode 토글 | Options | 왼쪽 스틱 클릭 (실수로 눌리기 쉬움, hold_gate_external 참고) |
+| Autoware engage / disengage | ○ / Share + ○ | B / 가이드 + B |
+| Vehicle engage / disengage | △ / Share + △ | X / 가이드 + X |
+| 비상정지 / 해제 | PS / Share + PS | 오른쪽 스틱 클릭 / 가이드 + 오른쪽 스틱 클릭 |
+
+joy_controller의 `joy_type:=xbox` 프로파일은 버튼 17개 레이아웃을 가정해서 11개짜리 Xbox 360 모드 패드에서는 인덱스 초과로 죽는다. Xbox 모드 패드도 `ds4`로 띄우고 위 표를 쓰면 된다.
 
 ## 실차에서 쓸 때
 
