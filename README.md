@@ -10,10 +10,14 @@ autoware_joy_controller 출력을 요즘 Autoware의 AD API 수동조작 토픽�
 joy_node -> joy_controller
   -> /api/external/set/command/remote/control   (tier4 ControlCommandStamped)
   -> /api/external/set/command/remote/shift     (tier4 GearShiftStamped, 십자키 누를 때만)
+  -> /api/external/set/command/remote/turn_signal (tier4 TurnSignalStamped, L1/R1/Share 누를 때만)
+  -> /api/external/set/command/remote/heartbeat (tier4 Heartbeat)
   -> [이 노드]
   -> /external/remote/pedals_cmd    (adapi PedalsCommand)
      /external/remote/steering_cmd  (adapi SteeringCommand)
      /external/remote/gear_cmd      (GearCommand, 타이머로 계속 발행)
+     /external/remote/turn_indicators_cmd, hazard_lights_cmd (타이머로 계속 발행)
+     /external/remote/heartbeat     (adapi ManualOperatorHeartbeat, 릴레이)
   -> external_cmd_selector -> external_cmd_converter -> vehicle_cmd_gate
 ```
 
@@ -60,6 +64,7 @@ gate mode도 이 노드가 시작하면서 `/control/current_gate_mode`가 AUTO�
 - `input_topic` (기본 `/api/external/set/command/remote/control`)
 - `pedals_topic`, `steering_topic`, `gear_topic`
 - `shift_topic` (기본 `/api/external/set/command/remote/shift`)
+- `turn_signal_topic`, `turn_indicators_topic`, `hazard_lights_topic`. L1 좌, R1 우, L1+R1 비상등, Share 끄기.
 - `publish_gear` (기본 true)
 - `input_heartbeat_topic` (기본 `/api/external/set/command/remote/heartbeat`)
 - `heartbeat_topic` (기본 `/external/remote/heartbeat`)

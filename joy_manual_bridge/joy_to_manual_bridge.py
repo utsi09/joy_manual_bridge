@@ -6,9 +6,11 @@ from rclpy.node import Node
 
 from tier4_external_api_msgs.msg import ControlCommandStamped, GearShiftStamped
 from tier4_external_api_msgs.msg import GearShift, Heartbeat
+from tier4_external_api_msgs.msg import TurnSignalStamped, TurnSignal
 from autoware_adapi_v1_msgs.msg import PedalsCommand, SteeringCommand
 from autoware_adapi_v1_msgs.msg import ManualOperatorHeartbeat
 from autoware_vehicle_msgs.msg import GearCommand, VelocityReport
+from autoware_vehicle_msgs.msg import TurnIndicatorsCommand, HazardLightsCommand
 from tier4_control_msgs.msg import ExternalCommandSelectorMode, GateMode
 from tier4_control_msgs.srv import ExternalCommandSelect
 
@@ -50,6 +52,19 @@ class JoyToManualBridge(Node):
         self.declare_parameter(
             "shift_topic",
             "/api/external/set/command/remote/shift",
+        )
+        # 방향지시등/비상등. joy_controller: L1 좌, R1 우, L1+R1 비상등, Share 끄기
+        self.declare_parameter(
+            "turn_signal_topic",
+            "/api/external/set/command/remote/turn_signal",
+        )
+        self.declare_parameter(
+            "turn_indicators_topic",
+            "/external/remote/turn_indicators_cmd",
+        )
+        self.declare_parameter(
+            "hazard_lights_topic",
+            "/external/remote/hazard_lights_cmd",
         )
         self.declare_parameter(
             "publish_gear",
@@ -138,6 +153,9 @@ class JoyToManualBridge(Node):
         steering_topic = self.get_parameter("steering_topic").value
         gear_topic = self.get_parameter("gear_topic").value
         shift_topic = self.get_parameter("shift_topic").value
+        turn_signal_topic = self.get_parameter("turn_signal_topic").value
+        turn_indicators_topic = self.get_parameter("turn_indicators_topic").value
+        hazard_lights_topic = self.get_parameter("hazard_lights_topic").value
 
         input_heartbeat_topic = self.get_parameter("input_heartbeat_topic").value
         heartbeat_topic = self.get_parameter("heartbeat_topic").value
@@ -201,6 +219,25 @@ class JoyToManualBridge(Node):
             10,
         )
 
+        self.turn_indicators_pub = self.create_publisher(
+            TurnIndicatorsCommand,
+            turn_indicators_topic,
+            10,
+        )
+        self.hazard_lights_pub = self.create_publisher(
+            HazardLightsCommand,
+            hazard_lights_topic,
+            10,
+        )
+        self.turn_indicators_command = TurnIndicatorsCommand.DISABLE
+        self.hazard_lights_command = HazardLightsCommand.DISABLE
+        self.turn_signal_sub = self.create_subscription(
+            TurnSignalStamped,
+            turn_signal_topic,
+            self.on_turn_signal,
+            10,
+        )
+
         self.current_speed = None
         self.velocity_sub = self.create_subscription(
             VelocityReport,
@@ -258,6 +295,10 @@ class JoyToManualBridge(Node):
         self.get_logger().info(f"publish steering: {steering_topic}")
         self.get_logger().info(f"publish gear: {gear_topic}")
         self.get_logger().info(f"subscribe shift: {shift_topic}")
+        self.get_logger().info(
+            f"turn signal: {turn_signal_topic} -> {turn_indicators_topic},"
+            f" {hazard_lights_topic}"
+        )
         self.get_logger().info(f"initial gear: {self.gear_command}")
         self.get_logger().info(
             f"gate_external_on_start: {self.gate_external_on_start}"
@@ -303,6 +344,39 @@ class JoyToManualBridge(Node):
 
         self.pedals_pub.publish(pedals_msg)
         self.steering_pub.publish(steering_msg)
+
+    def on_turn_signal(self, msg):
+        data = msg.turn_signal.data
+        if data == TurnSignal.HAZARD:
+            self.turn_indicators_command = TurnIndicatorsCommand.DISABLE
+            self.hazard_lights_command = HazardLightsCommand.ENABLE
+        elif data == TurnSignal.LEFT:
+            self.turn_indicators_command = TurnIndicatorsCommand.ENABLE_LEFT
+            self.hazard_lights_command = HazardLightsCommand.DISABLE
+        elif data == TurnSignal.RIGHT:
+            self.turn_indicators_command = TurnIndicatorsCommand.ENABLE_RIGHT
+            self.hazard_lights_command = HazardLightsCommand.DISABLE
+        elif data == TurnSignal.NONE:
+            self.turn_indicators_command = TurnIndicatorsCommand.DISABLE
+            self.hazard_lights_command = HazardLightsCommand.DISABLE
+        else:
+            self.get_logger().warn(f"unknown turn signal: {data}")
+            return
+        self.get_logger().info(
+            f"turn signal: indicators={self.turn_indicators_command}"
+            f" hazard={self.hazard_lights_command}"
+        )
+
+    def publish_turn_signal_cmds(self):
+        stamp = self.now_stamp()
+        ti = TurnIndicatorsCommand()
+        ti.stamp = stamp
+        ti.command = self.turn_indicators_command
+        hl = HazardLightsCommand()
+        hl.stamp = stamp
+        hl.command = self.hazard_lights_command
+        self.turn_indicators_pub.publish(ti)
+        self.hazard_lights_pub.publish(hl)
 
     def on_velocity(self, msg):
         self.current_speed = abs(float(msg.longitudinal_velocity))
@@ -404,6 +478,8 @@ class JoyToManualBridge(Node):
         if self.heartbeat_always:
             self.publish_heartbeat_msg()
 
+        self.publish_turn_signal_cmds()
+
         if not self.publish_gear:
             return
 
@@ -422,6 +498,11 @@ def main(args=None):
         rclpy.spin(node)
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
+    except Exception:  # noqa: BLE001
+        # SIGTERM 직후 rcl context가 먼저 내려가면 wait set 생성에서
+        # RCLError가 튀는데, 종료 중이면 무시해도 되는 잡음이다.
+        if rclpy.ok():
+            raise
     finally:
         node.destroy_node()
         rclpy.try_shutdown()
