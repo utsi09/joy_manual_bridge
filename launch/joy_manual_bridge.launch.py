@@ -20,10 +20,10 @@ def generate_launch_description():
         DeclareLaunchArgument('idle_brake', default_value='0.2'),
         # 기어별 최대 속도 [m/s], 0이면 제한 없음
         DeclareLaunchArgument('low_gear_max_speed', default_value='3.0'),
-        DeclareLaunchArgument('drive_gear_max_speed', default_value='0.0'),
+        DeclareLaunchArgument('drive_gear_max_speed', default_value='6.0'),
         DeclareLaunchArgument('reverse_gear_max_speed', default_value='3.0'),
         # gate가 AUTO로 돌아가면 다시 EXTERNAL로 되돌릴지
-        DeclareLaunchArgument('hold_gate_external', default_value='true'),
+        DeclareLaunchArgument('hold_gate_external', default_value='false'),
         # 스로틀 배율. 기본 accel map(0.5까지)을 쓰면 0.5 권장
         DeclareLaunchArgument('throttle_scale', default_value='1.0'),
         # joy_controller 하트비트 없이도 계속 ready를 쏠지 (테스트용)

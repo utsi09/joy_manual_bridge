@@ -156,19 +156,17 @@ class JoyToManualBridge(Node):
         )
         self.declare_parameter(
             "drive_gear_max_speed",
-            0.0,
+            6.0,
         )
         self.declare_parameter(
             "reverse_gear_max_speed",
             3.0,
         )
         # true면 이 노드가 떠 있는 동안 gate가 AUTO로 돌아가면 다시 EXTERNAL로
-        # 되돌린다. 조이스틱의 gate 토글 버튼(DS4 프로파일에서 Options, Xbox
-        # 모드 패드에서는 왼쪽 스틱 클릭)이 실수로 눌려도 자율주행으로 넘어가지
-        # 않게 하는 용도. 토글을 쓰고 싶으면 false.
+        # 되돌린다. 기본 false: 조이스틱 gate 토글 버튼을 그대로 쓴다.
         self.declare_parameter(
             "hold_gate_external",
-            True,
+            False,
         )
         self.declare_parameter(
             "velocity_topic",
