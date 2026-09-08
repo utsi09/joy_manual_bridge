@@ -18,6 +18,8 @@ def generate_launch_description():
         DeclareLaunchArgument('gear_change_max_speed', default_value='0.5'),
         # 페달 안 밟았을 때 넣어줄 브레이크 (크리프 방지). 0이면 끔
         DeclareLaunchArgument('idle_brake', default_value='0.2'),
+        # PARK에서 잡아둘 브레이크, 0이면 끔
+        DeclareLaunchArgument('park_brake', default_value='0.5'),
         # 기어별 최대 속도 [m/s], 0이면 제한 없음
         DeclareLaunchArgument('low_gear_max_speed', default_value='3.0'),
         DeclareLaunchArgument('drive_gear_max_speed', default_value='6.0'),
@@ -44,6 +46,7 @@ def generate_launch_description():
                     LaunchConfiguration('gear_change_max_speed'),
                 'idle_brake': LaunchConfiguration('idle_brake'),
                 'throttle_scale': LaunchConfiguration('throttle_scale'),
+                'park_brake': LaunchConfiguration('park_brake'),
                 'low_gear_max_speed':
                     LaunchConfiguration('low_gear_max_speed'),
                 'drive_gear_max_speed':

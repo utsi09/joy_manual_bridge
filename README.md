@@ -105,6 +105,7 @@ gate mode도 이 노드가 시작하면서 `/control/current_gate_mode`가 AUTO�
 - `gear_command` (기본 2 = DRIVE, 시작 기어. 20 = REVERSE)
 
 - `idle_brake` (기본 0.2), `idle_pedal_threshold` (기본 0.05). 페달을 둘 다 안 밟으면 브레이크를 idle_brake로 채워서 보낸다. Autoware 기본 accel map은 스로틀 0에서도 정지 시 +0.3 m/s^2(크리프)를 내서 차가 슬금슬금 나가기 때문. 0.2면 기본 brake map 기준 정지 시 -0.38, 주행 중 -0.7~-1.0 m/s^2. 실차에서 크리프를 살리고 싶으면 0.
+- `park_brake` (기본 0.5). external_cmd_converter는 P/N에서 목표 속도만 0으로 하고 가속도는 스로틀 맵 값을 그대로 내보내서(소스의 TODO) CARLA처럼 가속도로 움직이는 차는 P에서도 나간다. 이 노드는 P/N에서 스로틀을 0으로 자르고, P에서는 이 값으로 브레이크를 잡아둔다. 0이면 끔.
 - `low_gear_max_speed` (기본 3.0), `drive_gear_max_speed` (기본 6.0), `reverse_gear_max_speed` (기본 3.0). 0 이하면 제한 없음. 기어별 최대 속도[m/s]. external_cmd_converter는 LOW와 DRIVE를 구분하지 않으므로 이 노드가 속도를 넘으면 스로틀을 0으로 자르고 idle_brake로 감속시킨다.
 - `hold_gate_external` (기본 false). true면 노드가 떠 있는 동안 gate가 AUTO로 돌아가면 다시 EXTERNAL로 되돌린다. gate 토글 버튼이 실수로 눌리는 걸 막고 싶을 때만 켤 것.
 - `throttle_scale` (기본 1.0). Autoware 기본 accel map은 스로틀 0.5까지만 있어서 그 이상이면 converter가 `Input throttle: acc: 1 is out of range. use closest value.`를 찍으며 0.5로 자른다. 기본 맵이면 0.5로 두면 로그가 사라지고 결과는 같다.

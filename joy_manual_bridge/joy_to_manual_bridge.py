@@ -147,6 +147,14 @@ class JoyToManualBridge(Node):
             "throttle_scale",
             1.0,
         )
+        # PARK에서 잡아둘 브레이크 값. external_cmd_converter는 P/N에서 목표
+        # 속도만 0으로 만들고 가속도는 스로틀 맵 값을 그대로 내보내서(소스의 TODO)
+        # CARLA처럼 가속도로 움직이는 차는 P에서도 나간다. 여기서 P/N은 스로틀을
+        # 0으로 자르고, P는 이 값으로 브레이크를 건다. 0이면 끔.
+        self.declare_parameter(
+            "park_brake",
+            0.5,
+        )
         # 기어별 최대 속도[m/s]. converter는 LOW와 DRIVE를 똑같이 취급하므로
         # 여기서 속도를 넘으면 스로틀을 0으로 자르고 idle_brake로 감속시킨다.
         # 0 이하는 제한 없음.
@@ -195,6 +203,7 @@ class JoyToManualBridge(Node):
         self.throttle_scale = clamp(
             self.get_parameter("throttle_scale").value, 0.0, 1.0
         )
+        self.park_brake = clamp(self.get_parameter("park_brake").value, 0.0, 1.0)
         self.gear_max_speed = {
             GearCommand.LOW: float(self.get_parameter("low_gear_max_speed").value),
             GearCommand.DRIVE: float(
@@ -378,6 +387,17 @@ class JoyToManualBridge(Node):
         ):
             throttle = 0.0
             brake = self.idle_brake
+        # P/N에서는 가속 금지. P는 브레이크를 잡아둔다.
+        if self.gear_command in (GearCommand.PARK, GearCommand.NEUTRAL, GearCommand.NONE):
+            if throttle > 0.0:
+                self.get_logger().warn(
+                    f"throttle ignored in gear {self.gear_command}",
+                    throttle_duration_sec=2.0,
+                )
+            throttle = 0.0
+            if self.gear_command == GearCommand.PARK:
+                brake = max(brake, self.park_brake)
+
         # 기어별 속도 제한
         limit = self.gear_max_speed.get(self.gear_command, 0.0)
         if (
