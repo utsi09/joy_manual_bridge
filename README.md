@@ -46,7 +46,7 @@ ros2 launch joy_manual_bridge joy_manual_bridge.launch.py use_sim_time:=true
 
 하트비트는 joy_controller가 10Hz로 내는 `/api/external/set/command/remote/heartbeat`(tier4 Heartbeat)를 받아서 `/external/remote/heartbeat`(adapi ManualOperatorHeartbeat, ready=true)로 그대로 넘긴다. joy_controller가 죽으면 하트비트도 같이 끊긴다. joy_controller 없이 테스트할 때는 `heartbeat_always:=true`로 띄우면 타이머로 계속 쏜다.
 
-selector는 기본이 local이라 remote로 바꿔줘야 `/external/selected/*`가 나오는데, 이 노드가 시작하면서 `/control/external_cmd_selector/select_external_command`를 REMOTE로 호출해준다 (서비스가 뜰 때까지 재시도). 끄려면 `select_remote_on_start:=false`. 손으로 하려면:
+selector는 기본이 local이라 remote로 바꿔줘야 `/external/selected/*`가 나오는데, 이 노드가 시작하면서 `/control/external_cmd_selector/select_external_command`를 REMOTE로 호출해준다 (서비스가 뜰 때까지 재시도하고, Autoware를 다시 띄워 selector가 local로 돌아가면 다시 호출). 끄려면 `select_remote_on_start:=false`. 손으로 하려면:
 
 ```bash
 ros2 service call /control/external_cmd_selector/select_external_command \

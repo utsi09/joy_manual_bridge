@@ -96,6 +96,10 @@ class JoyToManualBridge(Node):
             "selector_service",
             "/control/external_cmd_selector/select_external_command",
         )
+        self.declare_parameter(
+            "current_selector_mode_topic",
+            "/control/external_cmd_selector/current_selector_mode",
+        )
         # 시작할 때 vehicle_cmd_gate를 EXTERNAL로 한 번 바꿔준다.
         # gate가 AUTO인 채로 에이전트가 engage하면 operation mode가 AUTONOMOUS로
         # 잡혀서 MRM이 걸리고 조이스틱이 무시된다. 한 번만 바꾸므로 이후
@@ -211,6 +215,9 @@ class JoyToManualBridge(Node):
             "select_remote_on_start"
         ).value
         selector_service = self.get_parameter("selector_service").value
+        current_selector_mode_topic = self.get_parameter(
+            "current_selector_mode_topic"
+        ).value
         self.gate_external_on_start = self.get_parameter(
             "gate_external_on_start"
         ).value
@@ -318,6 +325,14 @@ class JoyToManualBridge(Node):
         )
         self.selector_done = not self.select_remote_on_start
         self.selector_future = None
+        # Autoware를 다시 띄우면 selector가 기본값(local)으로 새로 뜬다.
+        # 현재 모드를 계속 보고 REMOTE가 아니면 다시 호출한다.
+        self.selector_mode_sub = self.create_subscription(
+            ExternalCommandSelectorMode,
+            current_selector_mode_topic,
+            self.on_current_selector_mode,
+            10,
+        )
 
         self.last_gear_stamp = self.get_clock().now()
         self.gear_timer = self.create_timer(0.1, self.publish_gear_cmd)
@@ -498,6 +513,18 @@ class JoyToManualBridge(Node):
         self.gate_mode_pub.publish(cmd)
         self.get_logger().info("gate mode AUTO -> EXTERNAL requested")
         self.gate_done = True
+
+    def on_current_selector_mode(self, msg):
+        if not self.select_remote_on_start:
+            return
+        if msg.data == ExternalCommandSelectorMode.REMOTE:
+            return
+        if self.selector_done:
+            self.get_logger().warn(
+                f"selector mode is {msg.data}, re-selecting REMOTE",
+                throttle_duration_sec=2.0,
+            )
+            self.selector_done = False
 
     def select_remote(self):
         # 서비스가 뜰 때까지 타이머마다 재시도. 성공하면 끝.
