@@ -23,6 +23,7 @@ setup(
     entry_points={
         "console_scripts": [
             "joy_to_manual_bridge = joy_manual_bridge.joy_to_manual_bridge:main",
+            "joy_remap = joy_manual_bridge.joy_remap:main",
         ],
     },
 )

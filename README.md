@@ -4,20 +4,29 @@
 
 joy_controller의 `joy_type:=ds4` 프로파일은 `/joy` 배열 인덱스로만 동작하므로 실제 패드 종류에 따라 물리 버튼이 달라진다. `ros2 topic echo /joy`로 인덱스를 확인할 것.
 
-| 기능 | DS4 (듀얼쇼크4) | Xbox 360 모드 패드 (GameSir 등, 버튼 11개 레이아웃) |
+| 기능 | DS4 (듀얼쇼크4) | Xbox 360 모드 패드 (GameSir 등) + `joy_gamesir.launch.py` |
 |---|---|---|
 | 가속 | R2 / ✕ / 오른쪽 스틱 위 | RT / A / 오른쪽 스틱 위 |
 | 브레이크 | L2 / □ / 오른쪽 스틱 아래 | LT / Y / 오른쪽 스틱 아래 |
 | 조향 | 왼쪽 스틱 좌우 | 왼쪽 스틱 좌우 |
 | 기어 D / R, 한 단 위/아래 | 십자키 → / ←, ↑ / ↓ | 십자키 → / ←, ↑ / ↓ |
-| 방향지시등 좌 / 우, 끄기 | L1 / R1, Share | LB / RB, Xbox(가이드) 버튼 |
+| 방향지시등 좌 / 우, 끄기 | L1 / R1, Share | LB / RB, **X** |
 | 비상등 | L1 + R1 | LB + RB |
 | gate mode 토글 | Options | 왼쪽 스틱 클릭 (실수로 눌리기 쉬움) |
-| Autoware engage / disengage | ○ / Share + ○ | B / 가이드 + B |
-| Vehicle engage / disengage | △ / Share + △ | X / 가이드 + X |
-| 비상정지 / 해제 | PS / Share + PS | 오른쪽 스틱 클릭 / 가이드 + 오른쪽 스틱 클릭 |
+| Autoware engage / disengage | ○ / Share + ○ | B / **X 누른 채** + B |
+| Vehicle engage / disengage | △ / Share + △ | 홈(로고) 버튼 / **X 누른 채** + 홈 |
+| 비상정지 / 해제 | PS / Share + PS | 오른쪽 스틱 클릭 / **X 누른 채** + 오른쪽 스틱 클릭 |
 
-joy_controller의 `joy_type:=xbox` 프로파일은 버튼 17개 레이아웃을 가정해서 11개짜리 Xbox 360 모드 패드에서는 인덱스 초과로 죽는다. Xbox 모드 패드도 `ds4`로 띄우고 위 표를 쓰면 된다.
+Xbox 모드 패드 주의점 두 가지. (1) joy_controller의 `joy_type:=xbox` 프로파일은 버튼 17개 레이아웃을 가정해서 11개짜리 패드에서는 인덱스 초과로 죽으므로 `ds4`로 띄운다. (2) GameSir 계열은 홈 버튼이 눌린 상태를 유지하지 못하고 0.1초 펄스만 내서 "누른 채 조합"이 안 된다. 그래서 `joy_remap` 노드가 `/joy`의 버튼 2(X)와 8(홈)을 맞바꿔 `/joy_remapped`로 내보내고, joy_controller가 그걸 읽는다. X가 조합키(Share 자리), 홈이 한 번짜리 vehicle engage(△ 자리)가 된다. 이 구성은 `joy_gamesir.launch.py` 하나로 joy_node, joy_remap, joy_controller, 브릿지를 같이 띄운다.
+
+```bash
+# CARLA
+ros2 launch joy_manual_bridge joy_gamesir.launch.py use_sim_time:=true throttle_scale:=0.5
+# 실차
+ros2 launch joy_manual_bridge joy_gamesir.launch.py
+```
+
+버튼 배치가 또 다른 패드는 `button_map:="[...]"` 인자로 바꾼다 (출력 i번 = 입력 map[i]번). `ros2 topic echo /joy --field buttons`로 인덱스를 확인할 것.
 
 ## 개요
 
